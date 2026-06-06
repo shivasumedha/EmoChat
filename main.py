@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from app import EmotionChatBot
-import io, os, sys
+import io, os
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -14,7 +14,7 @@ try:
     PDF_AVAILABLE = True
 except ImportError:
     PDF_AVAILABLE = False
-    print("[EmoChat] reportlab not installed. Run: pip install reportlab")
+    print("[EmoChat] reportlab not installed.")
 
 app = FastAPI(title="EmoChat API", version="2.0")
 
@@ -23,7 +23,6 @@ app.add_middleware(
     allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
 )
 
-# Bot loaded once here — NOT inside __main__ block
 bot = EmotionChatBot()
 
 class ChatRequest(BaseModel):
@@ -98,33 +97,7 @@ def export_pdf():
 
 if __name__ == "__main__":
     import uvicorn
-    import socket
-
-    PORT = 8000
-
-    # Auto-kill any process already using the port
-    def free_port(port):
-        import subprocess
-        result = subprocess.run(
-            f'netstat -ano | findstr :{port}',
-            shell=True, capture_output=True, text=True
-        )
-        for line in result.stdout.strip().splitlines():
-            parts = line.strip().split()
-            if parts and parts[-1].isdigit():
-                pid = parts[-1]
-                subprocess.run(f'taskkill /PID {pid} /F', shell=True,
-                               capture_output=True)
-                print(f"[EmoChat] Freed port {port} (killed PID {pid})")
-                break
-
-    # Check if port is in use, free it if so
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        if s.connect_ex(("127.0.0.1", PORT)) == 0:
-            print(f"[EmoChat] Port {PORT} busy — freeing it...")
-            free_port(PORT)
-            import time
-            time.sleep(1)
-
-    print(f"[EmoChat] Starting server on http://127.0.0.1:{PORT}")
-    uvicorn.run(app, host="127.0.0.1", port=PORT, reload=False)
+    # Port 7860 is required by Hugging Face Spaces
+    PORT = int(os.environ.get("PORT", 7860))
+    print(f"[EmoChat] Starting server on http://0.0.0.0:{PORT}")
+    uvicorn.run(app, host="0.0.0.0", port=PORT, reload=False)
